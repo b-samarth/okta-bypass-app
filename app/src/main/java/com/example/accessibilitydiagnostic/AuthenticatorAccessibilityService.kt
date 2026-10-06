@@ -22,51 +22,51 @@ class AuthenticatorAccessibilityService : AccessibilityService() {
 
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null) return
+    if (event == null) return
 
 
-        val packageName = event.packageName?.toString() ?: "unknown"
+    val packageName = event.packageName?.toString() ?: "unknown"
 
 
-        Log.i(
-            TAG,
-            "EVENT " +
-                "package=$packageName " +
-                "type=${event.eventType} " +
-                "class=${event.className} " +
-                "sourceAvailable=${event.source != null}"
-        )
+    Log.i(
+        TAG,
+        "EVENT " +
+            "package=$packageName " +
+            "type=${event.eventType} " +
+            "class=${event.className ?: "null"} " +
+            "sourceAvailable=${event.source != null} " +
+            "eventTextItems=${event.text.size} " +
+            "contentDescriptionPresent=${!event.contentDescription.isNullOrBlank()}"
+    )
 
 
-        val root = rootInActiveWindow
+    val root = rootInActiveWindow
 
 
-        if (root == null) {
-            Log.i(TAG, "ROOT_UNAVAILABLE package=$packageName")
-            return
-        }
-
-
-        var nodeCount = 0
-
-
-        inspectNode(
-            node = root,
-            depth = 0,
-            counter = { nodeCount++ }
-        )
-
-
-        Log.i(
-            TAG,
-            "TREE_COMPLETE " +
-                "package=$packageName " +
-                "nodes=$nodeCount"
-        )
-
-
-        root.recycle()
+    if (root == null) {
+        Log.i(TAG, "ROOT_UNAVAILABLE package=$packageName")
+        return
     }
+
+
+    var nodeCount = 0
+
+
+    inspectNode(
+        node = root,
+        depth = 0,
+        counter = { nodeCount++ }
+    )
+
+
+    Log.i(
+        TAG,
+        "TREE_COMPLETE package=$packageName nodes=$nodeCount"
+    )
+
+
+    root.recycle()
+}
 
 
     private fun inspectNode(
