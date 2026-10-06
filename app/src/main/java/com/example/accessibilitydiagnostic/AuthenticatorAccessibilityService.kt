@@ -1,79 +1,120 @@
 package com.example.accessibilitydiagnostic
 
+
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
+
 class AuthenticatorAccessibilityService : AccessibilityService() {
+
 
     companion object {
         private const val TAG = "ACCESS_DIAGNOSTIC"
-        private val SIX_DIGIT_REGEX = Regex("""(?<!\d)\d{6}(?!\d)""")
     }
+
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.i(TAG, "SERVICE_CONNECTED")
     }
 
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
-        val root = rootInActiveWindow ?: return
 
-        var textNodes = 0
-        val foundCodes = mutableListOf<String>()
+        val packageName = event.packageName?.toString() ?: "unknown"
 
-        inspectNode(root) { hasText, codes ->
-            if (hasText) textNodes++
-            if (codes.isNotEmpty()) {
-                foundCodes.addAll(codes)
-            }
+
+        Log.i(
+            TAG,
+            "EVENT " +
+                "package=$packageName " +
+                "type=${event.eventType} " +
+                "class=${event.className} " +
+                "sourceAvailable=${event.source != null}"
+        )
+
+
+        val root = rootInActiveWindow
+
+
+        if (root == null) {
+            Log.i(TAG, "ROOT_UNAVAILABLE package=$packageName")
+            return
         }
 
-        if (foundCodes.isNotEmpty()) {
-            Log.i(
-                TAG,
-                "EVENT " +
-                    "package=${event.packageName} " +
-                    "type=${event.eventType} " +
-                    "textNodes=$textNodes " +
-                    "sixDigitCandidates=${foundCodes.size} " +
-                    "codes=${foundCodes.joinToString(", ")}"
-            )
-        } else {
-            Log.i(
-                TAG,
-                "EVENT " +
-                    "package=${event.packageName} " +
-                    "type=${event.eventType} " +
-                    "textNodes=$textNodes " +
-                    "sixDigitCandidates=0"
-            )
-        }
+
+        var nodeCount = 0
+
+
+        inspectNode(
+            node = root,
+            depth = 0,
+            counter = { nodeCount++ }
+        )
+
+
+        Log.i(
+            TAG,
+            "TREE_COMPLETE " +
+                "package=$packageName " +
+                "nodes=$nodeCount"
+        )
+
+
+        root.recycle()
     }
+
 
     private fun inspectNode(
         node: AccessibilityNodeInfo,
-        callback: (Boolean, List<String>) -> Unit
+        depth: Int,
+        counter: () -> Unit
     ) {
-        val text = node.text?.toString().orEmpty()
+        counter()
 
-        if (text.isNotBlank()) {
-            val matches = SIX_DIGIT_REGEX.findAll(text).map { it.value }.toList()
-            callback(true, matches)
-        } else {
-            callback(false, emptyList())
-        }
+
+        // Deliberately log metadata only.
+        // Actual text/contentDescription values are never logged.
+        Log.i(
+            TAG,
+            "NODE " +
+                "depth=$depth " +
+                "class=${node.className ?: "null"} " +
+                "viewId=${node.viewIdResourceName ?: "null"} " +
+                "clickable=${node.isClickable} " +
+                "focusable=${node.isFocusable} " +
+                "focused=${node.isAccessibilityFocused} " +
+                "enabled=${node.isEnabled} " +
+                "editable=${node.isEditable} " +
+                "password=${node.isPassword} " +
+                "textPresent=${!node.text.isNullOrEmpty()} " +
+                "descriptionPresent=${!node.contentDescription.isNullOrEmpty()} " +
+                "children=${node.childCount}"
+        )
+
 
         for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
-                inspectNode(child, callback)
-                child.recycle()
+            val child = node.getChild(i)
+
+
+            if (child != null) {
+                try {
+                    inspectNode(
+                        node = child,
+                        depth = depth + 1,
+                        counter = counter
+                    )
+                } finally {
+                    child.recycle()
+                }
             }
         }
     }
+
 
     override fun onInterrupt() {
         Log.i(TAG, "SERVICE_INTERRUPTED")
