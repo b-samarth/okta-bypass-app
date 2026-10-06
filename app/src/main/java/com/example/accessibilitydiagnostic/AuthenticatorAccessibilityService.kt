@@ -12,34 +12,44 @@ class AuthenticatorAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null) return
-        val root = rootInActiveWindow ?: return
-        var textNodes = 0
-        var candidates = 0
+    if (event == null) return
+    val root = rootInActiveWindow ?: return
+    var textNodes = 0
+    val foundCodes = mutableListOf<String>()
 
-        fun inspect(node: AccessibilityNodeInfo) {
-            node.text?.toString()?.let { value ->
-                if (value.isNotBlank()) {
-                    textNodes++
-                    if (SIX_DIGIT.containsMatchIn(value)) candidates++
-                }
-            }
-            for (i in 0 until node.childCount) {
-                node.getChild(i)?.let { child ->
-                    inspect(child)
-                    child.recycle()
+
+    fun inspect(node: AccessibilityNodeInfo) {
+        node.text?.toString()?.let { value ->
+            if (value.isNotBlank()) {
+                textNodes++
+                // Find all 6-digit matches in the text node
+                SIX_DIGIT.findAll(value).forEach { matchResult ->
+                    foundCodes.add(matchResult.value)
                 }
             }
         }
-
-        inspect(root)
-
-        if (candidates > 0) {
-            Log.i(TAG, "ACCESSIBLE_CODE_PATTERN_DETECTED package=" +
-                event.packageName + " textNodes=" + textNodes +
-                " sixDigitCandidates=" + candidates)
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                inspect(child)
+                child.recycle()
+            }
         }
     }
+
+
+    inspect(root)
+
+
+    if (foundCodes.isNotEmpty()) {
+        Log.i(
+            TAG,
+            "ACCESSIBLE_CODE_PATTERN_DETECTED package=" +
+                    event.packageName + " textNodes=" + textNodes +
+                    " sixDigitCandidates=" + foundCodes.size +
+                    " codes=" + foundCodes.joinToString(", ")
+        )
+    }
+}
 
     override fun onInterrupt() {
         Log.i(TAG, "Accessibility service interrupted")
