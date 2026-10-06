@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Accessibility Diagnostic</string>
+    <string name="accessibility_service_label">Authenticator Accessibility Diagnostic</string>
+    <string name="accessibility_service_description">Diagnostic accessibility inspection without recording or transmitting authentication codes.</string>
+    <string name="title">Accessibility Diagnostic</string>
+    <string name="instructions">Enable the service in Android Settings, then open the app you want to inspect and watch Logcat.</string>
+    <string name="open_settings">Open Accessibility Settings</string>
+    <string name="privacy">The app never logs, stores, transmits, or submits OTP digits. It reports only redacted metadata.</string>
+</resources>
